@@ -1,49 +1,32 @@
-"use client";
-
-import { useState } from "react";
-
-export default function AdminLogin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleLogin = async () => {
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (res.ok) {
-      window.location.href = "/admin/dashboard";
-    } else {
-      alert("Invalid credentials");
-    }
-  };
-
+export default function AdminLoginPage() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded shadow w-96">
-        <h1 className="text-xl font-bold mb-4">Admin Login</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-8">
+        <h1 className="text-3xl font-bold text-center mb-6">
+          Admin Login
+        </h1>
 
-        <input
-          className="border p-2 w-full mb-3"
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="space-y-4">
+          <input
+            type="email"
+            placeholder="Email"
+            className="w-full border px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          />
 
-        <input
-          type="password"
-          className="border p-2 w-full mb-4"
-          placeholder="Password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full border px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          />
 
-        <button
-          onClick={handleLogin}
-          className="bg-black text-white w-full py-2"
-        >
-          Login
-        </button>
+          <button className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition">
+            Login
+          </button>
+        </div>
+
+        <p className="text-center text-gray-500 text-sm mt-6">
+          Authorized access only
+        </p>
       </div>
     </div>
   );
