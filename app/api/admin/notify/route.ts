@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
-import { emitAdminNotification } from "@/socket-server";
 
 export async function POST(req: Request) {
   const { message, link } = await req.json();
@@ -9,8 +8,6 @@ export async function POST(req: Request) {
     "INSERT INTO notifications (message, link) VALUES (?, ?)",
     [message, link]
   );
-
-  emitAdminNotification({ message, link });
 
   return NextResponse.json({ success: true });
 }
