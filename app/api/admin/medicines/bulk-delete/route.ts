@@ -15,16 +15,30 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate that all ids are numbers
+    const validIds = ids.filter((id) => !isNaN(Number(id)));
+
+    if (validIds.length === 0) {
+      return NextResponse.json(
+        { message: "No valid medicine IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    // Create placeholders for SQL query
+    const placeholders = validIds.map(() => "?").join(",");
+
     await db.query(
-      `UPDATE medicines SET status = 'inactive' WHERE id IN (${ids.map(() => "?").join(",")})`,
-      ids
+      `UPDATE medicines SET status = 'inactive' WHERE id IN (${placeholders})`,
+      validIds
     );
 
     return NextResponse.json({
-      message: "Selected medicines deactivated",
+      success: true,
+      message: `${validIds.length} medicine(s) deactivated successfully`,
     });
   } catch (err) {
-    console.error("BULK DELETE ERROR:", err);
+    console.error("BULK DEACTIVATE ERROR:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

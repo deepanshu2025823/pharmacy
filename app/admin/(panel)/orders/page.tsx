@@ -14,10 +14,13 @@ import {
   X,
   Search,
   Filter,
-  Download,
   RefreshCw,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 
 type Order = {
@@ -81,7 +84,15 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/orders");
+      const res = await fetch("/api/admin/orders", {
+        credentials: "include",
+      });
+      
+      if (res.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      
       const data = await res.json();
       setOrders(data);
       setFilteredOrders(data);
@@ -117,13 +128,16 @@ export default function OrdersPage() {
   const viewDetails = async (orderId: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}`);
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        credentials: "include",
+      });
+      
       if (!res.ok) {
         throw new Error('Failed to fetch order details');
       }
+      
       const data = await res.json();
       
-      // Ensure items is always an array
       if (!data.items || !Array.isArray(data.items)) {
         data.items = [];
       }
@@ -146,6 +160,7 @@ export default function OrdersPage() {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: newStatus }),
       });
       
@@ -158,7 +173,6 @@ export default function OrdersPage() {
       await loadOrders();
       
       if (selectedOrder?.id === orderId) {
-        // Update payment status in modal if COD and delivered
         const updatedPaymentStatus = 
           selectedOrder.payment_method === 'COD' && newStatus === 'DELIVERED' 
             ? 'PAID' 
@@ -173,7 +187,6 @@ export default function OrdersPage() {
         });
       }
       
-      // Show appropriate message based on email status
       if (result.emailSent) {
         setUpdateMessage({
           type: 'success',
@@ -187,11 +200,10 @@ export default function OrdersPage() {
       } else {
         setUpdateMessage({
           type: 'error',
-          text: '❌ Order status updated but email failed to send. Please check email configuration.'
+          text: '❌ Order status updated but email failed to send.'
         });
       }
       
-      // Clear message after 5 seconds
       setTimeout(() => setUpdateMessage(null), 5000);
       
     } catch (error) {
@@ -212,6 +224,7 @@ export default function OrdersPage() {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: "DELETE",
+        credentials: "include",
       });
       
       if (!res.ok) {
@@ -230,15 +243,17 @@ export default function OrdersPage() {
   };
 
   const getStats = () => {
-    return {
-      total: orders.length,
-      pending: orders.filter(o => o.status === "PENDING").length,
-      delivered: orders.filter(o => o.status === "DELIVERED").length,
-      cancelled: orders.filter(o => o.status === "CANCELLED").length,
-      revenue: orders
-        .filter(o => o.status === "DELIVERED")
-        .reduce((sum, o) => sum + Number(o.total_amount), 0),
-    };
+    const total = orders.length;
+    const pending = orders.filter(o => o.status === "PENDING").length;
+    const delivered = orders.filter(o => o.status === "DELIVERED").length;
+    const cancelled = orders.filter(o => o.status === "CANCELLED").length;
+    
+    // Calculate revenue only from DELIVERED orders with PAID payment status
+    const revenue = orders
+      .filter(o => o.status === "DELIVERED" && o.payment_status === "PAID")
+      .reduce((sum, o) => sum + parseFloat(String(o.total_amount || 0)), 0);
+    
+    return { total, pending, delivered, cancelled, revenue };
   };
 
   const stats = getStats();
@@ -264,64 +279,56 @@ export default function OrdersPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center gap-3">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
               <div className="bg-blue-100 p-3 rounded-lg">
                 <Package className="text-blue-600" size={24} />
               </div>
-              <div>
-                <p className="text-gray-600 text-sm">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
+              <TrendingUp className="text-gray-400" size={20} />
             </div>
+            <p className="text-gray-600 text-sm font-medium mb-1">Total Orders</p>
+            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
           </div>
           
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center gap-3">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
               <div className="bg-yellow-100 p-3 rounded-lg">
-                <RefreshCw className="text-yellow-600" size={24} />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <Clock className="text-yellow-600" size={24} />
               </div>
             </div>
+            <p className="text-gray-600 text-sm font-medium mb-1">Pending</p>
+            <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
           </div>
           
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center gap-3">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
               <div className="bg-green-100 p-3 rounded-lg">
-                <Package className="text-green-600" size={24} />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Delivered</p>
-                <p className="text-2xl font-bold text-green-600">{stats.delivered}</p>
+                <CheckCircle2 className="text-green-600" size={24} />
               </div>
             </div>
+            <p className="text-gray-600 text-sm font-medium mb-1">Delivered</p>
+            <p className="text-3xl font-bold text-green-600">{stats.delivered}</p>
           </div>
           
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center gap-3">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
               <div className="bg-red-100 p-3 rounded-lg">
-                <X className="text-red-600" size={24} />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Cancelled</p>
-                <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+                <XCircle className="text-red-600" size={24} />
               </div>
             </div>
+            <p className="text-gray-600 text-sm font-medium mb-1">Cancelled</p>
+            <p className="text-3xl font-bold text-red-600">{stats.cancelled}</p>
           </div>
           
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-100 p-3 rounded-lg">
-                <DollarSign className="text-emerald-600" size={24} />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Revenue</p>
-                <p className="text-2xl font-bold text-emerald-600">₹{stats.revenue.toFixed(2)}</p>
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-5 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="bg-white/20 p-3 rounded-lg">
+                <DollarSign className="text-white" size={24} />
               </div>
             </div>
+            <p className="text-emerald-100 text-sm font-medium mb-1">Total Revenue</p>
+            <p className="text-3xl font-bold text-white">₹{stats.revenue.toFixed(2)}</p>
+            <p className="text-emerald-100 text-xs mt-1">From delivered orders</p>
           </div>
         </div>
 
@@ -366,7 +373,8 @@ export default function OrdersPage() {
         ) : filteredOrders.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
             <Package className="mx-auto mb-4 text-gray-300" size={48} />
-            <p className="text-gray-600">No orders found</p>
+            <p className="text-gray-600 font-medium">No orders found</p>
+            <p className="text-gray-500 text-sm mt-1">Try adjusting your search or filter</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -403,11 +411,11 @@ export default function OrdersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="font-semibold text-emerald-600">₹{Number(order.total_amount).toFixed(2)}</span>
+                        <span className="font-semibold text-emerald-600">₹{parseFloat(String(order.total_amount)).toFixed(2)}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          <div className="text-xs text-gray-600">{order.payment_method}</div>
+                          <div className="text-xs text-gray-600 font-medium">{order.payment_method}</div>
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${paymentStatusColors[order.payment_status]?.bg} ${paymentStatusColors[order.payment_status]?.text}`}>
                             {order.payment_status}
                           </span>
@@ -531,7 +539,7 @@ export default function OrdersPage() {
                       <p className="font-medium text-gray-900">{selectedOrder.phone}</p>
                     </div>
                     <div className="md:col-span-2">
-                      <p className="text-sm text-gray-600 mb-1">Address</p>
+                      <p className="text-sm text-gray-600 mb-1">Delivery Address</p>
                       <p className="font-medium text-gray-900">
                         {selectedOrder.address}, {selectedOrder.city}, {selectedOrder.state} - {selectedOrder.pincode}
                       </p>
@@ -555,7 +563,7 @@ export default function OrdersPage() {
                             </p>
                             <p className="text-sm text-gray-600">Quantity: {item.qty}</p>
                           </div>
-                          <p className="font-semibold text-emerald-600">₹{Number(item.price).toFixed(2)}</p>
+                          <p className="font-semibold text-emerald-600">₹{parseFloat(String(item.price)).toFixed(2)}</p>
                         </div>
                       ))}
                     </div>
@@ -584,26 +592,26 @@ export default function OrdersPage() {
                     <div className="border-t border-gray-200 pt-3 space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Subtotal:</span>
-                        <span className="font-medium">₹{Number(selectedOrder.subtotal).toFixed(2)}</span>
+                        <span className="font-medium">₹{parseFloat(String(selectedOrder.subtotal)).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Delivery Fee:</span>
-                        <span className="font-medium">₹{Number(selectedOrder.delivery_fee).toFixed(2)}</span>
+                        <span className="font-medium">₹{parseFloat(String(selectedOrder.delivery_fee)).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-green-600">
                         <span>Discount:</span>
-                        <span className="font-medium">-₹{Number(selectedOrder.discount).toFixed(2)}</span>
+                        <span className="font-medium">-₹{parseFloat(String(selectedOrder.discount)).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-200 pt-2">
                         <span>Total Amount:</span>
-                        <span className="text-emerald-600">₹{Number(selectedOrder.total_amount).toFixed(2)}</span>
+                        <span className="text-emerald-600">₹{parseFloat(String(selectedOrder.total_amount)).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Order Date */}
-                <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center gap-2 text-gray-600 bg-gray-50 p-3 rounded-lg">
                   <Calendar size={18} />
                   <span>Order placed on: {new Date(selectedOrder.created_at).toLocaleString('en-IN')}</span>
                 </div>

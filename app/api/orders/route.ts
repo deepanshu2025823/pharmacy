@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-// import { requireRole } from "@/app/api/_utils/auth"; // optional (see below)
-
-/* ================= TYPES ================= */
 
 type CustomerRow = {
   id: number;

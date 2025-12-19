@@ -43,36 +43,49 @@ export async function PUT(
     const body = await req.json();
 
     await db.query(
-      `
-      UPDATE medicines SET
-        product_name = ?,
-        product_type = ?,
-        marketer = ?,
-        manufacturer = ?,
-        mrp = ?,
-        prescription_required = ?,
-        status = ?,
-        composition = ?,
-        how_to_use = ?,
-        image_url = ?
-      WHERE id = ?
-      `,
-      [
-        body.product_name ?? "",
-        body.product_type ?? "",
-        body.marketer ?? "",
-        body.manufacturer ?? "",
-        Number(body.mrp) || 0,
-        Number(body.prescription_required) === 1 ? 1 : 0,
-        body.status ?? "inactive",
-        body.composition ?? "",
-        body.how_to_use ?? "",
-        body.image_url ?? "",
-        id,
-      ]
-    );
+  `UPDATE medicines SET
+    product_name = ?,
+    product_type = ?,
+    marketer = ?,
+    manufacturer = ?,
+    mrp = ?,
+    pack_size = ?,
+    units = ?,
+    prescription_required = ?,
+    status = ?,
+    composition = ?,
+    how_to_use = ?,
+    side_effects = ?,
+    safety_advice = ?,
+    key_benefits = ?,
+    storage_instructions = ?,
+    image_url = ?
+  WHERE id = ?`,
+  [
+    body.product_name,
+    body.product_type,
+    body.marketer,
+    body.manufacturer,
+    body.mrp,
+    body.pack_size,
+    body.units,
+    body.prescription_required,
+    body.status,
+    body.composition,
+    body.how_to_use,
+    body.side_effects,
+    body.safety_advice,
+    body.key_benefits,
+    body.storage_instructions,
+    body.image_url,
+    id
+  ]
+);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: "Medicine updated successfully"
+    });
   } catch (err) {
     console.error("UPDATE MEDICINE ERROR:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
@@ -89,12 +102,27 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // First check if medicine exists
+    const [rows]: any = await db.query(
+      "SELECT id FROM medicines WHERE id = ? LIMIT 1",
+      [id]
+    );
+
+    if (!rows.length) {
+      return NextResponse.json(
+        { message: "Medicine not found" },
+        { status: 404 }
+      );
+    }
+
+    // Soft delete by setting status to inactive
     await db.query(
       "UPDATE medicines SET status = 'inactive' WHERE id = ?",
       [id]
     );
 
     return NextResponse.json({
+      success: true,
       message: "Medicine deactivated successfully",
     });
   } catch (err) {

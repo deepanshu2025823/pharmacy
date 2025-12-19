@@ -1,7 +1,6 @@
 // lib/email.ts
 import nodemailer from 'nodemailer';
 
-// Create transporter with verified settings
 const transporter = nodemailer.createTransport({
   host: 'smtp.hostinger.com',
   port: 465,
@@ -10,7 +9,6 @@ const transporter = nodemailer.createTransport({
     user: 'support@artomatic.in',
     pass: process.env.EMAIL_PASSWORD,
   },
-  // Add these for better debugging
   debug: true,
   logger: true,
 });

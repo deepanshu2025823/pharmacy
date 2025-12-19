@@ -22,12 +22,21 @@ export async function GET(req: Request) {
     let where = "WHERE m.product_name LIKE ?";
     const params: any[] = [`%${q}%`];
 
+    // Prescription filter
     if (rx === "1" || rx === "0") {
       where += " AND m.prescription_required = ?";
       params.push(Number(rx));
     }
 
-    if (status !== "all") {
+    // Status filter - UPDATED FOR TRASH
+    if (status === "trash") {
+      // Show only trash items
+      where += " AND m.status = 'trash'";
+    } else if (status === "all") {
+      // Show all except trash
+      where += " AND m.status != 'trash'";
+    } else {
+      // Show specific status (active/inactive)
       where += " AND m.status = ?";
       params.push(status);
     }
