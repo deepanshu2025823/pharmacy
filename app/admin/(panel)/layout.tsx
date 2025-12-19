@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { getSocket } from "@/lib/socket";
+import { socket } from "@/lib/socketClient";
 
 /* ================= Types ================= */
 
@@ -57,7 +57,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, []);
 
 useEffect(() => {
-  const socket = getSocket();
+  socket.on("connect", () => {
+    console.log("✅ Socket connected:", socket.id);
+  });
 
   socket.on("admin-notification", (data: Notification) => {
     setNotifications((prev) => {
@@ -71,7 +73,6 @@ useEffect(() => {
   };
 }, []);
 
-  /* ================= Live Search ================= */
   useEffect(() => {
     if (!search.trim()) {
       setResults([]);
@@ -91,7 +92,6 @@ useEffect(() => {
     return () => clearTimeout(t);
   }, [search]);
 
-  /* ================= Outside Click ================= */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
