@@ -2,39 +2,6 @@ import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { requireRole } from "@/app/api/_utils/auth";
 
-/* ===== GET ALL ===== */
-export async function GET() {
-  try {
-    await requireRole(["admin", "staff"]);
-
-    const [rows]: any = await db.query(`
-      SELECT
-        id,
-        slug,
-        name,
-        short_description,
-        concern,
-        price,
-        offer_price,
-        tests_count,
-        fasting_required,
-        popular,
-        description,
-        image_url,
-        status,
-        created_at
-      FROM lab_tests
-      ORDER BY id DESC
-    `);
-
-    return NextResponse.json(rows);
-  } catch (e) {
-    console.error("LAB TEST GET ERROR", e);
-    return NextResponse.json([], { status: 500 });
-  }
-}
-
-/* ===== CREATE ===== */
 export async function POST(req: Request) {
   try {
     await requireRole(["admin"]);
@@ -53,12 +20,20 @@ export async function POST(req: Request) {
       status = "active",
     } = await req.json();
 
+    if (!name || !price) {
+      return NextResponse.json(
+        { message: "Name and price required" },
+        { status: 400 }
+      );
+    }
+
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
     await db.query(
       `
       INSERT INTO lab_tests
-      (slug, name, short_description, concern, price, offer_price, tests_count, fasting_required, popular, description, image_url, status)
+      (slug, name, short_description, concern, price, offer_price,
+       tests_count, fasting_required, popular, description, image_url, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
@@ -67,10 +42,10 @@ export async function POST(req: Request) {
         short_description || null,
         concern || null,
         price,
-        offer_price,
+        offer_price || null,
         tests_count || 0,
-        fasting_required || 0,
-        popular || 0,
+        fasting_required ? 1 : 0,
+        popular ? 1 : 0,
         description || null,
         image_url || null,
         status,
@@ -79,7 +54,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (e) {
-    console.error("LAB TEST CREATE ERROR", e);
+    console.error("LAB TEST ERROR", e);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
