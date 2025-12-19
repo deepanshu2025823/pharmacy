@@ -56,22 +56,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, []);
 
-  /* ================= Socket (REAL-TIME) ================= */
-  useEffect(() => {
-    const socket = getSocket();
+useEffect(() => {
+  const socket = getSocket();
 
-    socket.on("admin:notification", (data: Notification) => {
-      setNotifications((prev) => {
-        // duplicate protection
-        if (prev.some((n) => n.id === data.id)) return prev;
-        return [data, ...prev];
-      });
+  socket.on("admin-notification", (data: Notification) => {
+    setNotifications((prev) => {
+      if (prev.some((n) => n.id === data.id)) return prev;
+      return [data, ...prev];
     });
+  });
 
-    return () => {
-      socket.off("admin:notification");
-    };
-  }, []);
+  return () => {
+    socket.off("admin-notification");
+  };
+}, []);
 
   /* ================= Live Search ================= */
   useEffect(() => {
