@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
+// import { requireRole } from "@/app/api/_utils/auth"; // optional (see below)
+
+/* ================= TYPES ================= */
 
 type CustomerRow = {
   id: number;
@@ -13,39 +16,61 @@ type OrderRow = {
   phone: string;
   payment_method: string;
   payment_status: string;
-  total_amount: string | number;
-  created_at: string | Date;
+  total_amount: number;
+  created_at: string;
 };
 
-// GET /api/orders?customerId=1
+/* ================= GET ORDERS ================= */
+/**
+ * GET /api/orders?customerId=1
+ * Returns all orders of a customer (by phone mapping)
+ */
 export async function GET(req: NextRequest) {
   try {
+    // 🔐 OPTIONAL SECURITY
+    // Uncomment if you want only logged-in users / admin
+    // await requireRole(["admin", "customer"]);
+
     const { searchParams } = new URL(req.url);
-    const idStr = searchParams.get("customerId");
+    const customerIdStr = searchParams.get("customerId");
 
-    if (!idStr) {
-      return new NextResponse("Missing customerId", { status: 400 });
+    if (!customerIdStr) {
+      return NextResponse.json(
+        { message: "customerId is required" },
+        { status: 400 }
+      );
     }
 
-    const customerId = Number(idStr);
-    if (!customerId || Number.isNaN(customerId)) {
-      return new NextResponse("Invalid customerId", { status: 400 });
+    const customerId = Number(customerIdStr);
+    if (Number.isNaN(customerId) || customerId <= 0) {
+      return NextResponse.json(
+        { message: "Invalid customerId" },
+        { status: 400 }
+      );
     }
 
-    // Customer ka phone nikal lo
-    const [customerRows] = (await db.query(
-      `SELECT id, name, phone FROM customers WHERE id = ? LIMIT 1`,
+    /* ===== Fetch customer ===== */
+    const [customerRows]: any = await db.query(
+      `
+      SELECT id, name, phone
+      FROM customers
+      WHERE id = ?
+      LIMIT 1
+      `,
       [customerId]
-    )) as any as [CustomerRow[]];
+    );
 
     if (!customerRows || customerRows.length === 0) {
-      return new NextResponse("Customer not found", { status: 404 });
+      return NextResponse.json(
+        { message: "Customer not found" },
+        { status: 404 }
+      );
     }
 
-    const customer = customerRows[0];
+    const customer: CustomerRow = customerRows[0];
 
-    // Orders table mein hum phone se map kar रहे हैं
-    const [orderRows] = (await db.query(
+    /* ===== Fetch orders using phone ===== */
+    const [orderRows]: any = await db.query(
       `
       SELECT
         id,
@@ -58,15 +83,24 @@ export async function GET(req: NextRequest) {
       FROM orders
       WHERE phone = ?
       ORDER BY created_at DESC
-    `,
+      `,
       [customer.phone]
-    )) as any as [OrderRow[]];
+    );
 
-    return NextResponse.json({ orders: orderRows || [] });
+    return NextResponse.json({
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+      },
+      orders: (orderRows as OrderRow[]) || [],
+    });
   } catch (err) {
     console.error("ORDERS LIST ERROR:", err);
-    return new NextResponse("Server error while loading orders", {
-      status: 500,
-    });
+
+    return NextResponse.json(
+      { message: "Server error while loading orders" },
+      { status: 500 }
+    );
   }
 }

@@ -5,12 +5,12 @@ import { requireRole } from "@/app/api/_utils/auth";
 /* ============ GET SINGLE MEDICINE ============ */
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     await requireRole(["admin"]);
 
-    const { id } = await params;
+    const { id } = params;
 
     const [rows]: any = await db.query(
       "SELECT * FROM medicines WHERE id = ? LIMIT 1",
@@ -34,12 +34,12 @@ export async function GET(
 /* ============ UPDATE MEDICINE ============ */
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     await requireRole(["admin"]);
 
-    const { id } = await params;
+    const { id } = params;
     const body = await req.json();
 
     await db.query(
@@ -75,6 +75,30 @@ export async function PUT(
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("UPDATE MEDICINE ERROR:", err);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
+}
+
+/* ============ SOFT DELETE MEDICINE ============ */
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await requireRole(["admin"]);
+
+    const { id } = params;
+
+    await db.query(
+      "UPDATE medicines SET status = 'inactive' WHERE id = ?",
+      [id]
+    );
+
+    return NextResponse.json({
+      message: "Medicine deactivated successfully",
+    });
+  } catch (err) {
+    console.error("SOFT DELETE MEDICINE ERROR:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
