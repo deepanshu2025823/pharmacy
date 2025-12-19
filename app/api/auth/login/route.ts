@@ -1,56 +1,92 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import db from "@/lib/db";
+
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { identifier, password } = body || {};
+    if (!JWT_SECRET) {
+      return NextResponse.json(
+        { message: "Server misconfigured" },
+        { status: 500 }
+      );
+    }
+
+    const { identifier, password } = await req.json();
 
     if (!identifier || !password) {
       return NextResponse.json(
-        { error: "Mobile / email and password required" },
+        { message: "Email or mobile and password required" },
         { status: 400 }
       );
     }
 
-    const [rows] = await db.query(
-      "SELECT id, name, email, phone, address, city, pincode, password_hash FROM customers WHERE phone = ? OR email = ? LIMIT 1",
+    const [rows]: any = await db.query(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        phone,
+        address,
+        city,
+        pincode,
+        password_hash
+      FROM customers
+      WHERE email = ? OR phone = ?
+      LIMIT 1
+      `,
       [identifier, identifier]
     );
 
-    if (!Array.isArray(rows) || rows.length === 0) {
+    if (!rows || rows.length === 0) {
       return NextResponse.json(
-        { error: "Account not found" },
-        { status: 400 }
+        { message: "Invalid credentials" },
+        { status: 401 }
       );
     }
 
-    const row: any = rows[0];
+    const user = rows[0];
 
-    const ok = await bcrypt.compare(String(password), row.password_hash);
-    if (!ok) {
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
       return NextResponse.json(
-        { error: "Invalid password" },
-        { status: 400 }
+        { message: "Invalid credentials" },
+        { status: 401 }
       );
     }
 
-    const user = {
-      id: row.id,
-      name: row.name,
-      email: row.email || "",
-      phone: row.phone,
-      address: row.address,
-      city: row.city,
-      pincode: row.pincode,
-    };
+    const token = jwt.sign(
+      { id: user.id, role: "user" },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
-    return NextResponse.json({ data: user });
+    (await cookies()).set("user_token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        pincode: user.pincode,
+      },
+    });
   } catch (err) {
     console.error("LOGIN ERROR", err);
     return NextResponse.json(
-      { error: "Unable to login right now" },
+      { message: "Login failed" },
       { status: 500 }
     );
   }

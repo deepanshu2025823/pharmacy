@@ -34,30 +34,29 @@ function LoginForm() {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          identifier,
+          password,
+        }),
       });
 
+      const json = await res.json();
+
       if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Login failed");
+        throw new Error(json.message || "Login failed");
       }
 
-      const json = await res.json();
       const user = json.data as UserProfile;
 
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
 
       router.push(nextPath);
     } catch (err: any) {
       console.error(err);
-      setError(
-        err?.message?.includes("error")
-          ? err.message
-          : "Invalid credentials. Please try again."
-      );
+      setError(err.message || "Invalid credentials");
     } finally {
       setLoading(false);
     }
@@ -68,35 +67,34 @@ function LoginForm() {
       <h1 className="text-xl md:text-2xl font-bold mb-2">
         Login to continue
       </h1>
+
       <p className="text-xs md:text-sm text-slate-600 mb-4">
-        Use your registered mobile number or email to continue to checkout.
+        Use your registered mobile number or email to continue.
       </p>
 
       {error && (
-        <p className="mb-3 text-xs text-red-500">
-          {error}
-        </p>
+        <p className="mb-3 text-xs text-red-500">{error}</p>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6 space-y-3 text-xs md:text-sm"
+        className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6 space-y-3"
       >
-        <div className="space-y-1">
-          <label className="block text-[11px] text-slate-600">
+        <div>
+          <label className="block text-xs text-slate-600 mb-1">
             Mobile number or Email
           </label>
           <input
             required
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
             placeholder="Registered mobile or email"
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="block text-[11px] text-slate-600">
+        <div>
+          <label className="block text-xs text-slate-600 mb-1">
             Password
           </label>
           <input
@@ -104,7 +102,7 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
             placeholder="Your password"
           />
         </div>
@@ -112,23 +110,10 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full mt-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold py-2.5 hover:bg-emerald-700 disabled:opacity-60"
+          className="w-full rounded-xl bg-emerald-600 text-white py-2.5 font-semibold disabled:opacity-60"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
-
-        <p className="text-[11px] text-slate-500 text-center mt-1">
-          New to Pharmacy?{" "}
-          <button
-            type="button"
-            onClick={() =>
-              router.push(`/register?next=${encodeURIComponent(nextPath)}`)
-            }
-            className="text-emerald-600 font-semibold hover:underline"
-          >
-            Create an account
-          </button>
-        </p>
       </form>
     </div>
   );
@@ -139,11 +124,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
       <main className="flex-1">
-        <Suspense fallback={
-          <div className="max-w-sm mx-auto px-4 py-6 md:py-10">
-            <div className="text-center">Loading...</div>
-          </div>
-        }>
+        <Suspense fallback={<div className="text-center mt-10">Loading...</div>}>
           <LoginForm />
         </Suspense>
       </main>
