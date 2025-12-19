@@ -44,19 +44,27 @@ export default function LabTestsPage() {
     status: "active" as "active" | "inactive",
   });
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/lab-tests");
-      const tests = await res.json();
-      setData(tests);
-      setFilteredData(tests);
-    } catch (error) {
-      console.error("Failed to load lab tests", error);
-    } finally {
-      setLoading(false);
+const load = async () => {
+  setLoading(true);
+  try {
+    const res = await fetch("/api/admin/lab-tests");
+
+    if (!res.ok) {
+      console.error("Lab tests API failed", res.status);
+      setData([]);
+      setFilteredData([]);
+      return;
     }
-  };
+
+    const tests = await res.json();
+    setData(tests);
+    setFilteredData(tests);
+  } catch (error) {
+    console.error("Failed to load lab tests", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     load();
@@ -99,21 +107,32 @@ export default function LabTestsPage() {
   };
 
   const uploadImages = async () => {
-    if (files.length === 0) {
-      return editing?.image_url || "";
-    }
+  if (files.length === 0) {
+    return editing?.image_url || "";
+  }
 
-    const fd = new FormData();
-    files.forEach((f) => fd.append("files", f));
+  const fd = new FormData();
+  files.forEach((f) => fd.append("files", f));
 
-    const res = await fetch("/api/admin/upload", {
-      method: "POST",
-      body: fd,
-    });
+  const res = await fetch("/api/admin/upload", {
+    method: "POST",
+    body: fd,
+  });
 
-    const json = await res.json();
-    return json.urls.join("|");
-  };
+  if (!res.ok) {
+    console.error("Upload failed", res.status);
+    return editing?.image_url || "";
+  }
+
+  const json = await res.json();
+
+  if (!json?.urls || !Array.isArray(json.urls)) {
+    console.error("Invalid upload response", json);
+    return editing?.image_url || "";
+  }
+
+  return json.urls.join("|");
+};
 
   const submit = async () => {
     if (!form.name || !form.price || !form.offer_price) {
@@ -137,11 +156,15 @@ export default function LabTestsPage() {
         ? `/api/admin/lab-tests/${editing.id}`
         : `/api/admin/lab-tests`;
 
-      await fetch(url, {
-        method: editing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(url, {
+  method: editing ? "PUT" : "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload),
+});
+
+if (!res.ok) {
+  throw new Error("Save failed");
+}
 
       resetForm();
       load();
