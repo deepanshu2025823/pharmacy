@@ -1,0 +1,7 @@
+﻿{
+  "framework": "nextjs",
+  "buildCommand": "npm install --legacy-peer-deps && npm run build",
+  "env": {
+    "NPM_CONFIG_LOGLEVEL": "error"
+  }
+}
