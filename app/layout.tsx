@@ -1,6 +1,8 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "Pharmacy – Online Pharmacy & Medicines",
@@ -24,6 +26,8 @@ export default function RootLayout({
             style: { fontSize: "14px" },
           }}
         />
+        
+        <Analytics />
       </body>
     </html>
   );
